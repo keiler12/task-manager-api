@@ -1,16 +1,10 @@
-import pool from "./config/database.js";
+import dotenv from "dotenv";
+import app from "./app.js";
 
-async function testDatabaseConnection(): Promise<void> {
-  try {
-    const result = await pool.query("SELECT current_database()");
+dotenv.config();
 
-    console.log("Conexión a PostgreSQL exitosa.");
-    console.log("Base de datos:", result.rows[0].current_database);
-  } catch (error) {
-    console.error("Error al conectar con PostgreSQL:", error);
-  } finally {
-    await pool.end();
-  }
-}
+const PORT = Number(process.env.PORT) || 3000;
 
-testDatabaseConnection();
+app.listen(PORT, () => {
+  console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
+});
