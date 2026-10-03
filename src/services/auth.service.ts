@@ -1,6 +1,12 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { createUser, findUserByEmail } from "../persistence/user.repository.js";
+
+import {
+  createUser,
+  findUserByEmail,
+} from "../persistence/user.repository.js";
+
+import { AppError } from "../errors/AppError.js";
 
 export async function registerUser(
   name: string,
@@ -10,12 +16,19 @@ export async function registerUser(
   const existingUser = await findUserByEmail(email);
 
   if (existingUser) {
-    throw new Error("El correo electrónico ya está registrado");
+    throw new AppError(
+      "El correo electrónico ya está registrado",
+      409
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = await createUser(name, email, passwordHash);
+  const user = await createUser(
+    name,
+    email,
+    passwordHash
+  );
 
   return {
     id: user.id,
@@ -32,7 +45,10 @@ export async function loginUser(
   const user = await findUserByEmail(email);
 
   if (!user) {
-    throw new Error("Credenciales inválidas");
+    throw new AppError(
+      "Credenciales inválidas",
+      401
+    );
   }
 
   const passwordIsValid = await bcrypt.compare(
@@ -41,13 +57,19 @@ export async function loginUser(
   );
 
   if (!passwordIsValid) {
-    throw new Error("Credenciales inválidas");
+    throw new AppError(
+      "Credenciales inválidas",
+      401
+    );
   }
 
   const jwtSecret = process.env.JWT_SECRET;
 
   if (!jwtSecret) {
-    throw new Error("JWT_SECRET no está configurado");
+    throw new AppError(
+      "JWT_SECRET no está configurado",
+      500
+    );
   }
 
   const token = jwt.sign(
@@ -57,7 +79,9 @@ export async function loginUser(
     },
     jwtSecret,
     {
-      expiresIn: "1h",
+      expiresIn:
+  (process.env.JWT_EXPIRES_IN ||
+    "1h") as jwt.SignOptions["expiresIn"],
     }
   );
 

@@ -1,4 +1,5 @@
-import { Request, Response } from "express";
+import { Response, NextFunction } from "express";
+
 import {
   createTaskService,
   getTasksService,
@@ -6,11 +7,14 @@ import {
   updateTaskService,
   deleteTaskService,
 } from "../services/task.service.js";
+
 import { AuthenticatedRequest } from "../middlewares/auth.middleware.js";
+import { AppError } from "../errors/AppError.js";
 
 export async function createTask(
   req: AuthenticatedRequest,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> {
   try {
     const userId = req.user!.userId;
@@ -35,17 +39,14 @@ export async function createTask(
       task,
     });
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Error interno del servidor",
-    });
+    next(error);
   }
 }
 
 export async function getTasks(
   req: AuthenticatedRequest,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> {
   try {
     const userId = req.user!.userId;
@@ -56,51 +57,54 @@ export async function getTasks(
       tasks,
     });
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Error interno del servidor",
-    });
+    next(error);
   }
 }
 
 export async function getTaskById(
   req: AuthenticatedRequest,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> {
   try {
     const userId = req.user!.userId;
     const taskId = Number(req.params.id);
 
-    const task = await getTaskByIdService(taskId, userId);
+    const task = await getTaskByIdService(
+      taskId,
+      userId
+    );
 
     if (!task) {
-      res.status(404).json({
-        message: "Tarea no encontrada",
-      });
-
-      return;
+      throw new AppError(
+        "Tarea no encontrada",
+        404
+      );
     }
 
     res.status(200).json({
       task,
     });
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Error interno del servidor",
-    });
+    next(error);
   }
 }
 
 export async function updateTask(
   req: AuthenticatedRequest,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> {
   try {
     const userId = req.user!.userId;
     const taskId = Number(req.params.id);
+
+    if (!Number.isInteger(taskId) || taskId <= 0) {
+  throw new AppError(
+    "ID de tarea inválido",
+    400
+  );
+}
 
     const {
       titulo,
@@ -119,11 +123,10 @@ export async function updateTask(
     );
 
     if (!task) {
-      res.status(404).json({
-        message: "Tarea no encontrada",
-      });
-
-      return;
+      throw new AppError(
+        "Tarea no encontrada",
+        404
+      );
     }
 
     res.status(200).json({
@@ -131,40 +134,35 @@ export async function updateTask(
       task,
     });
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Error interno del servidor",
-    });
+    next(error);
   }
 }
 
 export async function deleteTask(
   req: AuthenticatedRequest,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> {
   try {
     const userId = req.user!.userId;
     const taskId = Number(req.params.id);
 
-    const deleted = await deleteTaskService(taskId, userId);
+    const deleted = await deleteTaskService(
+      taskId,
+      userId
+    );
 
     if (!deleted) {
-      res.status(404).json({
-        message: "Tarea no encontrada",
-      });
-
-      return;
+      throw new AppError(
+        "Tarea no encontrada",
+        404
+      );
     }
 
     res.status(200).json({
       message: "Tarea eliminada correctamente",
     });
   } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      message: "Error interno del servidor",
-    });
+    next(error);
   }
 }
